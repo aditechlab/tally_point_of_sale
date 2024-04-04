@@ -76,6 +76,7 @@ class StockGroup extends BaseModel
         }
     }
 
+
     public function updateStock($data, $master_id)
     {
         if (!empty($data) && is_array($data)) {
@@ -166,6 +167,16 @@ class StockGroup extends BaseModel
         return $row['id'];
     }
 
+
+//    public function getParentName()
+//    {
+//        $query = "SELECT parent FROM group_categories";
+//        $stmt = $this->con->prepare($query);
+//        $stmt->execute();
+//        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+//        return $row['parent'];
+//    }
+
 //    public function getAlias($alias, $name)
 //    {
 //
@@ -215,6 +226,21 @@ class StockGroup extends BaseModel
         return $row;
     }
 
+    public function getAliasData($alias)
+    {
+        $alias_name = $_POST['alias'];
+
+        $query = "SELECT * FROM stock_groups s
+              INNER JOIN group_alias g ON s.id = g.stock_group_id
+              WHERE (g.alias1 = :alias) OR s.name=:name";
+        $stmt = $this->con->prepare($query);
+        $stmt->bindParam(':alias', $alias_name, PDO::PARAM_STR);
+        $stmt->bindParam(':name', $alias_name, PDO::PARAM_STR);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row;
+    }
+
     public function fetchStockGroups($group_id)
     {
 
@@ -235,6 +261,25 @@ class StockGroup extends BaseModel
 
         $query = "SELECT * FROM stock_groups GROUP BY name";
         $stmt = $this->con->prepare($query);
+        $stmt->execute();
+        $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $row;
+    }
+    public function fetchParentData()
+    {
+
+        $query = "SELECT * FROM group_categories GROUP BY parent";
+        $stmt = $this->con->prepare($query);
+        $stmt->execute();
+        $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return $row;
+    }
+
+    public function getGroupParent($parent)
+    {
+        $query = "SELECT * FROM stock_groups  WHERE name =:name";
+        $stmt = $this->con->prepare($query);
+        $stmt->bindParam(':name', $parent, PDO::PARAM_STR);
         $stmt->execute();
         $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return $row;

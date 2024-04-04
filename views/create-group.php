@@ -24,9 +24,9 @@ $parents = $group->fetchParent();
             <div class="col-md-12 grid-margin stretch-card">
                 <div class="card">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex">
                             <p class="card-title">Create Group</p>
-                            <div>
+                            <div style="margin-left: 180px">
                                 <button type="button" onclick="event.preventDefault(); window.history.back();" class="btn btn-secondary btn-sm btn-icon-text"><i class="ti-arrow-left btn-icon-prepend"></i> Back</button>
                                 <a href="view-group.php" class="btn btn-primary btn-sm btn-icon-text"><i class="ti-list btn-icon-prepend"></i> Group Lists</a>
                             </div>
@@ -44,21 +44,27 @@ $parents = $group->fetchParent();
                                     <label for="group_name">Group Name</label>
                                     <input type="text" class="form-control" name="group_name" id="group_name" placeholder="Group Name" required="required"/>
                                 </div>
+
+                            </div>
+
+                            <div class="row">
                                 <div class="form-group col-md-6 col-lg-4">
                                     <label for="alias_name">Alias</label>
                                     <div class="input-group">
                                         <input type="text" class="form-control" name="alias_name" id="alias_name" placeholder="Enter alias"/>
-                                        <div class="input-append px-lg-4">
-                                            <button type="button" class="btn btn-info btn-sm" onclick="addAlias()">Add</button>
-                                        </div>
                                     </div>
                                 </div>
+                                <div class="input-append mt-4 py-2">
+                                    <button type="button" class="btn btn-info btn-sm" onclick="addAlias()">Add</button>
+                                </div>
+                            </div>
+                            <div class="row">
                                 <div class="form-group col-md-6 col-lg-4" id="table_alias">
                                     <table class="table">
                                         <thead>
-                                            <tr>
+                                        <tr>
 
-                                            </tr>
+                                        </tr>
                                         </thead>
                                         <tbody id="aliasTable">
                                         </tbody>
@@ -77,7 +83,7 @@ $parents = $group->fetchParent();
                                     </select>
                                 </div>
                             </div>
-                            <div class="form-group float-right">
+                            <div class="form-group">
                                 <button type="reset" class="btn btn-warning">Reset</button>
                                 <button type="submit" id="submit" class="btn btn-success">Save</button>
                             </div>
@@ -90,10 +96,10 @@ $parents = $group->fetchParent();
 <style>
     #table_alias {
         width: fit-content;
-        height: 100px;
+        height: 150px;
         overflow-y: auto;
         scroll-behavior: smooth;
-        border: 1px solid;
+        /*border: 1px solid;*/
         border-radius: 20px;
 
     }
@@ -105,6 +111,7 @@ $parents = $group->fetchParent();
     }
     ul li {
         margin-bottom: 0.3rem !important;
+        line-height: 0.1 !important;
     }
     ul li::before {
         margin-right: 0.5rem;
@@ -157,79 +164,6 @@ $parents = $group->fetchParent();
         const row = button.closest('li');
         row.remove();
     }
-    // $(document).ready(function (){
-    //     // $("#group_name").on('keyup', function (){
-    //     //     var name = $(this).val();
-    //     //     $.ajax({
-    //     //         url:'../controllers/StockGroupController.php?f=checkGroupName',
-    //     //         method:'POST',
-    //     //         data:{ group_name:name },
-    //     //         dataType:'json',
-    //     //         success:function (response){
-    //     //             console.log(response);
-    //     //             if(name === response.name){
-    //     //                 alert("Sorry this group exist create another")
-    //     //                 $('#group_name').val("");
-    //     //                 }
-    //     //         }
-    //     //     })
-    //     // });
-    //     $("#group_name").on('keyup', function (){
-    //         // var alias = $(this).val();
-    //         var alias = $("#alias_name").val();
-    //         var name = $("#group_name").val();
-    //         console.log(alias)
-    //         console.log(name)
-    //         $.ajax({
-    //             url:'../controllers/StockGroupController.php?f=checkGroupAndAlias',
-    //             method:'POST',
-    //             data:{
-    //                 alias_name:alias,
-    //                 group_name:name
-    //             },
-    //             dataType:'json',
-    //             success:function (response){
-    //                 console.log(response);
-    //                 if (alias === response.data.alias || alias === response.data.alias1) {
-    //                     alert("Sorry this alias exist create another")
-    //                     $('#alias_name').val("");
-    //                 }else
-    //                 if(name === response.data.name){
-    //                     alert("Sorry this group exist create another")
-    //                     $('#group_name').val("");
-    //                 }
-    //
-    //             }
-    //         })
-    //     });
-    //
-    //     $("#alias_name").on('keyup', function (){
-    //         // var alias = $(this).val();
-    //         var alias = $("#alias_name").val();
-    //         var name = $("#group_name").val();
-    //         $.ajax({
-    //             url:'../controllers/StockGroupController.php?f=checkGroupAndAlias',
-    //             method:'POST',
-    //             data:{
-    //                 alias_name:alias,
-    //                 group_name:name
-    //             },
-    //             dataType:'json',
-    //             success:function (response){
-    //                 console.log(response);
-    //                 if (alias === response.data.alias || alias === response.data.alias1) {
-    //                     alert("Sorry this alias exist create another")
-    //                     $('#alias_name').val("");
-    //                 }else
-    //                     if(name === response.data.name){
-    //                         alert("Sorry this group exist create another")
-    //                         $('#group_name').val("");
-    //                     }
-    //
-    //             }
-    //         })
-    //     });
-    // });
     $(document).ready(function(){
         $('#group_name, #alias_name').on('blur', function(){
             var field = $(this); // Get the current field

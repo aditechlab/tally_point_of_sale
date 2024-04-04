@@ -17,6 +17,7 @@ function createGroup()
 
     $master = generateUniqueMasterID();
 
+
     $data = array(
         'master_id' => $master,
         'name' => str_replace("'", "''", $_POST['group_name']),
@@ -28,6 +29,8 @@ function createGroup()
         'created_at' => date('Y-m-d H:i:s'),
         'updated_at' => null,
     );
+//    echo json_encode($data);
+//    exit;
 
 
 
@@ -38,6 +41,7 @@ function createGroup()
         exit;
     }
     $add_response = $stockgroup->insertStock($data);
+
 
 
 
@@ -121,6 +125,19 @@ function checkGroupAndAliasDuplicates(){
         }
     }
 }
+function checkGroupAndAliasData(){
+    global $stockgroup;
+    if (isset($_POST['alias'])){
+        $alias = $_POST['alias'];
+
+        $data = $stockgroup->getAliasData($alias);
+        if ($data) {
+            echo json_encode(['exists' => true]);
+        } else {
+            echo json_encode(['exists' => false]);
+        }
+    }
+}
 
 function updateGroup()
 {
@@ -132,13 +149,32 @@ function updateGroup()
         'name' => str_replace("'", "''", $_POST['group_name']),
         'alias' => $_POST['alias_name'],
         'alterid' => 33,
-        'parent_master_id' => 0,
         'parent' => $_POST['parent'],
         'created_at' => date('Y-m-d H:i:s'),
         'updated_at' => date('Y-m-d H:i:s'),
     );
 //    echo json_encode($data);
 //    exit;
+    $query = "SELECT name FROM stock_groups WHERE id = :id";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':id', $master_id, PDO::PARAM_STR);
+    $stmt->execute();
+    $values = $stmt->fetch(PDO::FETCH_ASSOC);
+
+
+    $query = "SELECT parent FROM stock_groups WHERE parent=:name GROUP BY parent";
+    $stmt = $db->prepare($query);
+    $stmt->bindParam(':name', $values['name'], PDO::PARAM_STR);
+    $stmt->execute();
+    $checkParent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
+    if (count($checkParent) > 0){
+       $query = "UPDATE stock_groups set parent='".$_POST['group_name']."' WHERE parent='".$values['name']."'";
+        $stmt = $db->prepare($query);
+        $stmt->execute();
+    }
+
     $add_response = $stockgroup->updateStock($data, $master_id);
     $existingAliases = array();
     $sql = "SELECT Id, alias1 FROM group_alias WHERE stock_group_id = ?";
@@ -213,6 +249,18 @@ function updateGroup()
         </script>
         <?php
     }
+}
+
+function getParent()
+{
+    global $db;
+    global $stockgroup;
+    $name = $_POST['parent'];
+    if (isset($name)){
+        $groupname = $stockgroup->getGroupParent($name);
+        echo json_encode($groupname);
+    }
+
 }
 
 

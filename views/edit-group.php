@@ -25,9 +25,9 @@ $parents = $group->fetchParent();
         <div class="col-md-12 grid-margin stretch-card">
             <div class="card">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
+                    <div class="d-flex">
                         <p class="card-title">Edit Group</p>
-                        <div>
+                        <div style="margin-left: 180px">
                             <button type="button" onclick="event.preventDefault(); window.history.back();" class="btn btn-secondary btn-sm btn-icon-text"><i class="ti-arrow-left btn-icon-prepend"></i> Back</button>
                             <a href="view-group.php" class="btn btn-primary btn-sm btn-icon-text"><i class="ti-list btn-icon-prepend"></i> Group Lists</a>
                         </div>
@@ -52,10 +52,10 @@ $parents = $group->fetchParent();
                                 <label for="alias_name">Alias</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control" name="alias_name" id="alias_name" value="<?php echo $details[0]['alias']; ?>"placeholder="Enter alias"/>
-                                    <div class="input-append">
-                                        <button type="button" class="btn btn-info btn-sm" onclick="addAlias()">Add</button>
-                                    </div>
                                 </div>
+                            </div>
+                            <div class="input-append mt-4 py-2">
+                                <button type="button" class="btn btn-info btn-sm" onclick="addAlias()">Add</button>
                             </div>
                         </div>
                         <div class="row">
@@ -85,10 +85,10 @@ $parents = $group->fetchParent();
                                         <?php }} ?>
 
                                 </select>
-                                <label>(Parent)</label>
+                                <label><span class="badge badge-info" id="parent_label"></span> </label>
                             </div>
                         </div>
-                        <div class="form-group float-right">
+                        <div class="form-group">
                             <button type="reset" class="btn btn-warning">Reset</button>
                             <button type="submit" class="btn btn-success">Save</button>
                         </div>
@@ -104,7 +104,7 @@ $parents = $group->fetchParent();
         height: 150px;
         overflow-y: auto;
         scroll-behavior: smooth;
-        border: 1px solid;
+        /*border: 1px solid;*/
         border-radius: 20px;
     }
     #aliases-container {
@@ -143,8 +143,8 @@ $parents = $group->fetchParent();
         addedAliases.forEach((item, index) => {
             const listItem = document.createElement('ul');
             listItem.innerHTML = `
-                <li>(${index + 1}) <input type="text" style="width: 100px;border: transparent;" name="alias_id[]" id="alias_id" value="${item.Id}">
-                <input type="text" style="width: 100px;border: transparent;" name="alias[]" id="alias" value="${item.alias1}">
+                <li>(${index + 1}) <input type="hidden" style="width: 100px;border: transparent;" name="alias_id[]" id="alias_id" value="${item.Id}">
+                <input type="text" style="width: 100px;border: transparent;" name="alias[]" id="alias_v" onblur="checkDuplicates()" value="${item.alias1}">
                      <span type="button" onclick="removeAlias(this)">x</span>
                 </li>
             `;
@@ -173,6 +173,7 @@ $parents = $group->fetchParent();
             var field = $(this); // Get the current field
             var value = field.val(); // Get the entered value
             var fieldName = field.attr('name');
+            console.log(fieldName)
 
             $.ajax({
                 type: 'POST',
@@ -195,5 +196,51 @@ $parents = $group->fetchParent();
                 }
             });
         });
+
+        $("#parent").on('change', function (){
+            var group = $(this).val();
+            console.log(group)
+            $.ajax({
+                type: 'POST',
+                url: '../controllers/StockGroupController.php?f=getParent',
+                data: {
+                    parent: group,
+                },
+                dataType: 'json',
+                success: function(response) {
+                    if(response){
+                        response.forEach((item, index) => {
+                            $('#parent_label').text(item.parent)
+                        });
+                    }
+                }
+            });
+        });
     });
+
+    function  checkDuplicates(){
+        var field = $("#alias_v");
+        var value = field.val();
+        var fieldName = field.attr('name');
+        console.log(fieldName)
+
+        $.ajax({
+            type: 'POST',
+            url: '../controllers/StockGroupController.php?f=checkGroupAndAliasData',
+            data: {
+                alias: value,
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.exists) {
+                    alert('The entered value already exists as either ' + fieldName + ' or alias.');
+                    $(field).val("");
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error(xhr.responseText);
+                alert('Error occurred while checking group and alias.');
+            }
+        });
+    }
 </script>

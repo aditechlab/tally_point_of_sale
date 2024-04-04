@@ -7,7 +7,6 @@ $database = new Database();
 $db = $database->connect();
 $group = new Ledger($db);
 
-
 $parents = $group->fetchParent();
 
 
@@ -19,9 +18,9 @@ $parents = $group->fetchParent();
         <div class="col-md-12 grid-margin stretch-card">
             <div class="card">
                 <div class="card-body">
-                    <div class="d-flex justify-content-between">
+                    <div class="d-flex">
                         <p class="card-title">Create Ledger</p>
-                        <div>
+                        <div style="margin-left: 180px">
                             <button type="button" onclick="event.preventDefault(); window.history.back();" class="btn btn-secondary btn-sm btn-icon-text"><i class="ti-arrow-left btn-icon-prepend"></i> Back</button>
                             <a href="view-ledger.php" class="btn btn-primary btn-sm btn-icon-text"><i class="ti-list btn-icon-prepend"></i> Ledger Lists</a>
                         </div>
@@ -33,21 +32,27 @@ $parents = $group->fetchParent();
                             unset($_SESSION['message']);
                         } ?>
                     </h4>
-                    <form id="addLedger" method="post" enctype="multipart/form-data">
+                    <form id="addGroup" method="post" enctype="multipart/form-data">
                         <div class="row">
                             <div class="form-group col-md-6 col-lg-4">
-                                <label for="group_name">Ledger Name </label>
+                                <label for="ledger_name">Ledger Name</label>
                                 <input type="text" class="form-control" name="ledger_name" id="ledger_name" placeholder="Ledger Name" required="required"/>
                             </div>
+
+                        </div>
+
+                        <div class="row">
                             <div class="form-group col-md-6 col-lg-4">
                                 <label for="alias_name">Alias</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control" name="alias_name" id="alias_name" placeholder="Enter alias"/>
-                                    <div class="input-append px-lg-4">
-                                        <button type="button" class="btn btn-info btn-sm" onclick="addAlias()">Add</button>
-                                    </div>
                                 </div>
                             </div>
+                            <div class="input-append mt-4 py-2">
+                                <button type="button" class="btn btn-info btn-sm" onclick="addAlias()">Add</button>
+                            </div>
+                        </div>
+                        <div class="row">
                             <div class="form-group col-md-6 col-lg-4" id="table_alias">
                                 <table class="table">
                                     <thead>
@@ -62,16 +67,17 @@ $parents = $group->fetchParent();
                         </div>
                         <div class="row">
                             <div class="form-group col-md-6 col-lg-4">
-                                <label for="group_name">Parent</label>
+                                <label for="parent">Parent</label>
                                 <select class="form-control" name="parent" id="parent" required>
                                     <option value="">Select parent ...</option>
+                                    <option value="Primary">Primary</option>
                                     <?php foreach ($parents as $val){ ?>
                                         <option value="<?php echo $val['name'] ?>"><?php echo $val['name'] ?></option>
                                     <?php } ?>
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group float-right">
+                        <div class="form-group">
                             <button type="reset" class="btn btn-warning">Reset</button>
                             <button type="submit" id="submit" class="btn btn-success">Save</button>
                         </div>
@@ -84,15 +90,26 @@ $parents = $group->fetchParent();
 <style>
     #table_alias {
         width: fit-content;
-        height: 100px;
+        height: 150px;
         overflow-y: auto;
         scroll-behavior: smooth;
+        /*border: 1px solid;*/
+        border-radius: 20px;
+
     }
+
+
     ul {
         list-style: none;
+        line-height:1rem;
     }
     ul li {
-        line-height: 0.2;
+        margin-bottom: 0.3rem !important;
+        line-height: 0.1 !important;
+    }
+    ul li::before {
+        margin-right: 0.5rem;
+        color: #ff6f00;
     }
 </style>
 <script>
@@ -111,7 +128,7 @@ $parents = $group->fetchParent();
             }
             else{
 
-                document.getElementById('addLedger').action ="../controllers/LedgerController.php?f=createLedger";
+                document.getElementById('addGroup').action ="../controllers/LedgerController.php?f=createGroup";
 
             }
         });
@@ -127,22 +144,20 @@ $parents = $group->fetchParent();
             const newRow = document.createElement('ul');
             // newRow.setAttribute(border, 'none');
             newRow.innerHTML = `
-                <li><input type="text" style="width: 100px;border: none;line-height: 0.2;" name="alias[]" id="alias" value="${aliasInput}">
-                    <span type="button" class="" onclick="removeAlias(this)">x</span>
+                <li>(${aliasCount}) <input type="text" style="width: 100px;border: none;" name="alias[]" id="alias" value="${aliasInput}">
+                    <span type="button" onclick="removeAlias(this)">x</span>
                 </li>
-
             `;
             tableBody.appendChild(newRow);
             document.getElementById('alias_name').value="";
         }else{
-            alert("Duplicates entry!");
+            alert("Duplicate entry!");
         }
     }
     function removeAlias(button) {
         const row = button.closest('li');
         row.remove();
     }
-
     $(document).ready(function(){
         $('#ledger_name, #alias_name').on('blur', function(){
             var field = $(this);
@@ -151,7 +166,7 @@ $parents = $group->fetchParent();
 
             $.ajax({
                 type: 'POST',
-                url: '../controllers/LedgerController.php?f=checkLedgerAndAlias',
+                url: '../controllers/LedgerController.php?f=checkGroupAndAlias',
                 data: {
                     ledger_name: value,
                     alias_name: value
