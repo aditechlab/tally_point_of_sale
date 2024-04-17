@@ -51,7 +51,7 @@ $parents = $group->fetchParent();
                             <div class="form-group col-md-6 col-lg-4">
                                 <label for="alias_name">Alias</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" name="alias_name" id="alias_name" value="<?php echo $details[0]['alias']; ?>"placeholder="Enter alias"/>
+                                    <input type="text" class="form-control" name="alias_name" id="alias_name" value="" placeholder="Enter alias"/>
                                 </div>
                             </div>
                             <div class="input-append mt-4 py-2">
@@ -136,40 +136,111 @@ $parents = $group->fetchParent();
 
     let aliasCount = <?php echo count($details); ?>;
     let addedAliases = <?php echo json_encode(array_values($details)); ?>;
-    console.log(addedAliases);
     function displayAliases() {
         const aliasesList = document.getElementById('aliasTable');
         aliasesList.innerHTML = '';
+
         addedAliases.forEach((item, index) => {
-            const listItem = document.createElement('ul');
-            listItem.innerHTML = `
-                <li>(${index + 1}) <input type="hidden" style="width: 100px;border: transparent;" name="alias_id[]" id="alias_id" value="${item.Id}">
-                <input type="text" style="width: 100px;border: transparent;" name="alias[]" id="alias_v" onblur="checkDuplicates()" value="${item.alias1}">
-                     <span type="button" onclick="removeAlias(this)">x</span>
-                </li>
+            if (item.Id !== null) {
+                console.log(item.Id)
+                const listItem = document.createElement('ul');
+                listItem.innerHTML = `
+
+                <li>(${index + 1})<input type="hidden" name="alias_id[]" value="${item.Id}" id="alias_id_${index}">
+                    <input type="text"  style="width: 100px;border: transparent;" name="alias[]" value="${item.alias1}" id="alias_v_${index}" data-index="${index}" readonly>
+                    <span type="button" onclick="removeAlias(this)">x</span>
+               </li>
             `;
-            aliasesList.appendChild(listItem);
+
+                aliasesList.appendChild(listItem);
+
+                const editInput = document.getElementById(`alias_v_${index}`);
+                editInput.addEventListener('click', () => editAlias(editInput));
+            }
         });
     }
-    function addAlias(){
+
+    function editAlias(input) {
+        const index = parseInt(input.getAttribute('data-index'));
+        const aliasValue = addedAliases[index].alias1;
+        document.getElementById('alias_name').value = aliasValue;
+        document.getElementById('alias_name').setAttribute('data-index', index);
+    }
+
+    function addAlias() {
         const aliasInput = document.getElementById('alias_name').value.trim();
+        const storedIndex = parseInt(document.getElementById('alias_name').getAttribute('data-index'));
+
         if (aliasInput !== '' && !addedAliases.includes(aliasInput)) {
-            const newAlias = { alias1: aliasInput };
-            addedAliases.push(newAlias);
-            displayAliases(); // Call to update the displayed list
-            document.getElementById('alias_name').value="";
+            if (!isNaN(storedIndex) && storedIndex >= 0 && storedIndex < addedAliases.length) {
+                // Update existing alias
+                addedAliases[storedIndex].alias1 = aliasInput;
+            } else {
+                // Add a new alias
+                const newAlias = { alias1: aliasInput };
+                addedAliases.push(newAlias);
+            }
+            displayAliases(); // Refresh the displayed list
+            document.getElementById('alias_name').value = "";
+            document.getElementById('alias_name').removeAttribute('data-index'); // Clear stored index
         } else {
             alert("Duplicate Entry!");
         }
     }
 
+    // function addAlias() {
+    //     const aliasInput = document.getElementById('alias_name').value.trim();
+    //     const storedIndex = parseInt(document.getElementById('alias_name').getAttribute('data-index'));
+    //
+    //     if (aliasInput !== '') {
+    //         if (storedIndex !== -1) {
+    //             // Update existing alias
+    //             addedAliases[storedIndex].alias1 = aliasInput;
+    //             displayAliases(); // Refresh the displayed list
+    //         } else if (!addedAliases.includes(aliasInput)) {
+    //             // Add a new alias
+    //             const newAlias = { alias1: aliasInput };
+    //             addedAliases.push(newAlias);
+    //             displayAliases();
+    //         } else {
+    //             alert("Duplicate Entry!");
+    //         }
+    //
+    //         document.getElementById('alias_name').value = "";
+    //         document.getElementById('alias_name').removeAttribute('data-index'); // Clear stored index
+    //     }
+    // }
+
+
     window.onload = displayAliases;
     function removeAlias(button) {
-        const row = button.closest('li');
-        row.remove();
+        const listItem = button.closest('li');
+        const aliasId = parseInt(listItem.querySelector('input[name="alias_id[]"]').value);
+
+        if (aliasId !== 0) {
+            $.ajax({
+                url: '../controllers/StockGroupController.php?f=deleteAlias',
+                method: 'POST',
+                data: { alias_id: aliasId },
+                success: function(response) {
+                    if (response) {
+                        listItem.remove();
+                        alert("Alias removed successfully!");
+                    } else {
+                        alert("Failed to remove alias. Please try again.");
+                    }
+                },
+                error: function() {
+                    alert("An error occurred while removing the alias.");
+                }
+            });
+        } else {
+            listItem.remove();
+        }
     }
+
     $(document).ready(function (){
-        $('#group_name, #alias_name').on('blur', function(){
+        $('#group_name, #alias_name').on('change', function(){
             var field = $(this); // Get the current field
             var value = field.val(); // Get the entered value
             var fieldName = field.attr('name');
@@ -185,6 +256,7 @@ $parents = $group->fetchParent();
                 },
                 dataType: 'json',
                 success: function(response) {
+                    console.log(response)
                     if (response.exists) {
                         alert('The entered value already exists as either ' + fieldName + ' or alias.');
                         $(field).val("");
@@ -218,22 +290,20 @@ $parents = $group->fetchParent();
         });
     });
 
-    function  checkDuplicates(){
-        var field = $("#alias_v");
-        var value = field.val();
-        var fieldName = field.attr('name');
-        console.log(fieldName)
+    function  checkDuplicates(index){
+        var field = document.getElementById(`alias_v_${index}`);
+        var value = field.value.trim();
+        var data = { alias: value, editedIndex: index };
+        console.log(value)
 
         $.ajax({
             type: 'POST',
             url: '../controllers/StockGroupController.php?f=checkGroupAndAliasData',
-            data: {
-                alias: value,
-            },
+            data: data,
             dataType: 'json',
             success: function(response) {
                 if (response.exists) {
-                    alert('The entered value already exists as either ' + fieldName + ' or alias.');
+                    alert('Alias entered already exists');
                     $(field).val("");
                 }
             },

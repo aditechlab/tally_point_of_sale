@@ -17,12 +17,25 @@ function createGroup()
 
     $master = generateUniqueMasterID();
 
+    $parents = array(
+        'parent' => $_POST['parent'],
+        'created_at' => date('Y-m-d H:i:s'),
+        'updated_at' => null,
+    );
+
+    $result = $stockgroup->insertParent($parents);
+    if($result){
+        $parent_id = $stockgroup->getParentId($_POST['parent']);
+    }
+
 
     $data = array(
         'master_id' => $master,
         'name' => str_replace("'", "''", $_POST['group_name']),
+        'alias' => $_POST['alias_name'],
+        'alias1' => "",
         'alterid' => 33,
-        'parent_master_id' => 0,
+        'parent_master_id' => $parent_id,
         'parent' => $_POST['parent'],
         'created_at' => date('Y-m-d H:i:s'),
         'updated_at' => null,
@@ -55,24 +68,88 @@ function createGroup()
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => null
             );
-            $stockgroup->insertAlias($alias);
+            $alias_response = $stockgroup->insertAlias($alias);
         }
     }
 
-    if($add_response) {
-        $_SESSION['message']='<div class="alert alert-success">Group created successfully!</div>';?>
+    if($add_response && $alias_response) {
+        $_SESSION['message']='<div class="alert alert-success">Stock groups created successfully!</div>';?>
         <script>
             window.history.back();
         </script>
-    <?php
+        <?php
     } else{
-    $_SESSION['message']='<div class="alert alert-success">Problem in creating group</div>';?>
+        $_SESSION['message']='<div class="alert alert-success">Problem in creating stock groups</div>';?>
         <script>
             window.history.back();
         </script>
         <?php
     }
 }
+
+function generateUniqueMasterID($length = 5) {
+    $unique_id = uniqid();
+
+    // Add a random component to ensure uniqueness
+    $random_component = bin2hex(random_bytes(2));
+    $master_id = substr($unique_id, 0, $length - strlen($random_component)) . $random_component;
+    return $master_id;
+}
+
+function checkGroupName(){
+    global $stockgroup;
+    $name = $_POST['group_name'];
+    if (isset($name)){
+        $groupname = $stockgroup->getGroupName($name);
+        echo json_encode($groupname);
+    }
+}
+
+function checkGroupAndAlias(){
+    global $stockgroup;
+
+    if (isset($_POST['group_name']) || isset($_POST['alias_name'])){
+        $alias = $_POST['alias_name'];
+        $name = $_POST['group_name'];
+
+        $data = $stockgroup->getAlias($alias, $name);
+        if ($data) {
+            echo json_encode(['exists' => true]);
+        } else {
+            echo json_encode(['exists' => false]);
+        }
+    }
+}
+
+function checkGroupAndAliasDuplicates(){
+    global $stockgroup;
+    if (isset($_POST['group_name']) || isset($_POST['alias_name'])){
+        $alias = $_POST['alias_name'];
+        $name = $_POST['group_name'];
+        $id = $_POST['group_id'];
+
+        $data = $stockgroup->getAliasAndGroupName($alias, $name, $id);
+        if ($data) {
+            echo json_encode(['exists' => true]);
+        } else {
+            echo json_encode(['exists' => false]);
+        }
+    }
+}
+function checkGroupAndAliasData(){
+    global $stockgroup;
+    if (isset($_POST['alias'])){
+        $alias = $_POST['alias'];
+
+        $data = $stockgroup->getAliasData($alias);
+        if ($data) {
+            echo json_encode(['exists' => true]);
+        } else {
+            echo json_encode(['exists' => false]);
+        }
+    }
+}
+
 function updateGroup()
 {
     global $stockgroup;
@@ -81,32 +158,24 @@ function updateGroup()
     $data = array(
         'master_id' => null,
         'name' => str_replace("'", "''", $_POST['group_name']),
+        'alias' => $_POST['alias_name'],
         'alterid' => 33,
+        'parent_master_id' => 0,
         'parent' => $_POST['parent'],
         'created_at' => date('Y-m-d H:i:s'),
         'updated_at' => date('Y-m-d H:i:s'),
     );
 //    echo json_encode($data);
 //    exit;
-    $query = "SELECT name FROM stock_groups WHERE id = :id";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':id', $master_id, PDO::PARAM_STR);
-    $stmt->execute();
-    $values = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
-    $query = "SELECT parent FROM stock_groups WHERE parent=:name GROUP BY parent";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':name', $values['name'], PDO::PARAM_STR);
-    $stmt->execute();
-    $checkParent = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-
-    if (count($checkParent) > 0){
-        $query = "UPDATE stock_groups set parent='".$_POST['group_name']."' WHERE parent='".$values['name']."'";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
-    }
+//    $query = "SELECT * FROM stock_groups WHERE parent = :parent";
+//    $stmt = $db->prepare($query);
+//    $stmt->bindParam(':parent', $_POST['group_name'], PDO::PARAM_STR);
+//    $stmt->execute();
+//    $checkParent = $stmt->fetchAll(PDO::FETCH_ASSOC);
+//    $count = $checkParent->rowCount();
+//    if ($count > 0){
+//        $query = "UPDATE stock_groups set parent='".$_POST['group_name']."'";
+//    }
 
     $add_response = $stockgroup->updateStock($data, $master_id);
     $existingAliases = array();
@@ -152,6 +221,8 @@ function updateGroup()
         }
     }
 
+//    echo json_encode($aliasToInsert);
+//    exit;
 
     foreach ($aliasToUpdate as $data) {
         $stockgroup->updateAlias($data, $data['id']); // Use ID for update
@@ -170,7 +241,7 @@ function updateGroup()
     if($add_response) {
         $_SESSION['message']='<div class="alert alert-success">Stock groups updated successfully!</div>';?>
         <script>
-            window.location.href = '../views/view-group.php';
+            window.history.back();
         </script>
         <?php
     } else{
@@ -182,74 +253,6 @@ function updateGroup()
     }
 }
 
-function generateUniqueMasterID($length = 5) {
-    $unique_id = uniqid();
-
-    // Add a random component to ensure uniqueness
-    $random_component = bin2hex(random_bytes(2));
-    $master_id = substr($unique_id, 0, $length - strlen($random_component)) . $random_component;
-    return $master_id;
-}
-
-function checkGroupName(){
-    global $stockgroup;
-    $name = $_POST['group_name'];
-    if (isset($name)){
-        $groupname = $stockgroup->getGroupName($name);
-        echo json_encode($groupname);
-    }
-}
-
-function validateGroupAndAlias(){
-    global $stockgroup;
-
-    if (isset($_POST['group_name']) || isset($_POST['alias_name'])){
-        $alias = $_POST['alias_name'];
-        $name = $_POST['group_name'];
-        $cleaned_name = trim($name, "- ;");
-
-        $data = $stockgroup->getStockGroupByAliasOrName($alias, $name);
-
-        if ($data){
-             echo json_encode(['exists' => true]);
-        } else {
-            echo json_encode(['exists' => false]);
-        }
-    }
-}
-
-function checkGroupAndAliasDuplicates(){
-    global $stockgroup;
-    if (isset($_POST['group_name']) || isset($_POST['alias_name'])){
-        $alias = $_POST['alias_name'];
-        $name = $_POST['group_name'];
-        $id = $_POST['group_id'];
-
-        $data = $stockgroup->getAliasAndGroupName($alias, $name, $id);
-        if ($data) {
-            echo json_encode(['exists' => true]);
-        } else {
-            echo json_encode(['exists' => false]);
-        }
-    }
-}
-function checkGroupAndAliasData(){
-    global $stockgroup;
-    if (isset($_POST['alias'])){
-        $alias = $_POST['alias'];
-        $editedIndex = isset($data['editedIndex']) ? $data['editedIndex'] : -1;
-
-        $data = $stockgroup->getAliasData($alias,$editedIndex);
-        if ($data) {
-            echo json_encode(['exists' => true]);
-        } else {
-            echo json_encode(['exists' => false]);
-        }
-    }
-}
-
-
-
 function getParent()
 {
     global $db;
@@ -260,16 +263,6 @@ function getParent()
         echo json_encode($groupname);
     }
 
-}
-
-function deleteAlias()
-{
-    global $stockgroup;
-    $alias_id = $_POST['alias_id'];
-    if (isset($alias_id)){
-        $groupname = $stockgroup->removeAlias($alias_id);
-        echo json_encode($groupname);
-    }
 }
 
 

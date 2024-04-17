@@ -1,17 +1,13 @@
 <?php
 include('../layouts/header.php');
 require('../database/connection.php');
-require('../models/StockItem.php');
 require('../models/StockGroup.php');
-require('../models/StockCategory.php');
-require('../models/StockUnit.php');
+
 
 $database = new Database();
 $db = $database->connect();
 $group = new StockGroup($db);
-$item = new StockItem($db);
-$category = new StockCategory($db);
-$unit = new StockUnit($db);
+
 
 $parents = $group->fetchParent();
 
@@ -172,7 +168,7 @@ $parents = $group->fetchParent();
 
             $.ajax({
                 type: 'POST',
-                url: '../controllers/StockGroupController.php?f=checkGroupAndAlias',
+                url: '../controllers/StockGroupController.php?f=validateGroupAndAlias',
                 data: {
                     group_name: value,
                     alias_name: value

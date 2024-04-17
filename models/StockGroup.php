@@ -149,6 +149,18 @@ class StockGroup extends BaseModel
         }
     }
 
+    function removeAlias($alias_id)
+    {
+        if(!empty($alias_id)){
+            $query = "DELETE FROM group_alias WHERE Id='$alias_id'";
+            $stmt = $this->con->prepare($query);
+            $stmt->execute();
+            return true;
+        }else{
+            return false;
+        }
+    }
+
     public function getGroupName()
     {
         $query = "SELECT name FROM stock_groups";
@@ -191,9 +203,9 @@ class StockGroup extends BaseModel
 //        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 //        return $row;
 //    }
-    public function getAlias($alias, $name)
-    {
 
+    public function getStockGroupByAliasOrName($alias, $name)
+    {
         $group_name = $_POST['group_name'];
         $alias_name = $_POST['alias_name'];
 
@@ -216,7 +228,7 @@ class StockGroup extends BaseModel
 
         $query = "SELECT * FROM stock_groups s
               INNER JOIN group_alias g ON s.id = g.stock_group_id
-              WHERE (g.alias1 = :alias) OR s.name=:name AND s.id=:id";
+              WHERE (g.alias1 = :alias) OR s.name=:name or s.id=:id";
         $stmt = $this->con->prepare($query);
         $stmt->bindParam(':alias', $alias_name, PDO::PARAM_STR);
         $stmt->bindParam(':name', $group_name, PDO::PARAM_STR);
@@ -226,16 +238,17 @@ class StockGroup extends BaseModel
         return $row;
     }
 
-    public function getAliasData($alias)
+    public function getAliasData($alias, $editedIndex = -1)
     {
         $alias_name = $_POST['alias'];
 
         $query = "SELECT * FROM stock_groups s
               INNER JOIN group_alias g ON s.id = g.stock_group_id
-              WHERE (g.alias1 = :alias) OR s.name=:name";
+              WHERE ((g.alias1 = :alias AND g.stock_group_id <> :editedIndex) OR s.name=:name)";
         $stmt = $this->con->prepare($query);
         $stmt->bindParam(':alias', $alias_name, PDO::PARAM_STR);
         $stmt->bindParam(':name', $alias_name, PDO::PARAM_STR);
+        $stmt->bindParam(':editedIndex', $editedIndex, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row;

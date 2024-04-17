@@ -38,7 +38,6 @@ $StockGroups = $stocks->all();
                             <thead>
                                 <th>Sr No</th>
                                 <th>Name</th>
-                                <th>Alias</th>
                                 <th>Parent</th>
                                 <th>Action</th>
                             </thead>
@@ -48,7 +47,6 @@ $StockGroups = $stocks->all();
                                     <tr>
                                         <td><?php echo $i++ ?></td>
                                         <td><?php echo $values['name'] ?></td>
-                                        <td><?php echo $values['alias'] ?></td>
                                         <td><?php echo $values['parent'] ?></td>
                                         <td>
                                             <a href="edit-group.php?id=<?php echo $values['id'];?>" class="btn btn-info"><i class="ti ti-pencil-alt"></i>Alter </a>
