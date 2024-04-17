@@ -11,34 +11,18 @@ class Ledger extends BaseModel
         $this->con = $db;
     }
 
-    public function loadData()
-    {
-        try{
-
-            $query = "SELECT * FROM StockGroupDataBase";
-            $result = odbc_exec($this->con, $query);
-            $list = array();
-            while ($row = odbc_fetch_array($result)){
-                $list[] = $row;
-            }
-            return $list;
-        }catch (Exception $e) {
-            echo "Error: " . $e->getMessage();
-            return false;
-        }
-    }
 
     public function all()
     {
         try{
-            $query = "SELECT * FROM ledgers";
+            $query = "SELECT l.ledger_name as ledger_name, s.name as name, l.id as id FROM ledgers l inner join stock_groups s on l.parent=s.id group by l.id";
             $stmt  = $this->con->prepare($query);
             $stmt->execute();
-            $StockGroups = array();
+            $Ledgers = array();
             while($rows = $stmt->fetch(PDO::FETCH_ASSOC)){
-                $StockGroups[] = $rows;
+                $Ledgers[] = $rows;
             }
-            return $StockGroups;
+            return $Ledgers;
 
         }catch(PDOException $e){
             echo "Error: " . $e->getMessage();
@@ -56,24 +40,40 @@ class Ledger extends BaseModel
         return $row;
     }
 
-    public function insertStock($data)
+    public function fetchMaxLedgerId($name)
     {
-        if(!empty($data) && is_array($data)){
-            foreach($data as $key => $value){
-                if(is_null($value) || $value == '')
-                    unset($data[$key]);
+        $query = "SELECT max(id) as id FROM ledgers WHERE ledger_name=:name";
+        $stmt = $this->con->prepare($query);
+        $stmt->bindParam(':name', $name, PDO::PARAM_STR);
+        $stmt->execute();
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['id'];
+    }
+
+    public function insertLedger($data)
+    {
+        try {
+            if(!empty($data) && is_array($data)){
+                foreach($data as $key => $value){
+                    if(is_null($value) || $value == '')
+                        unset($data[$key]);
+                }
+
+                $fields = implode(",", array_keys($data));
+                $values = implode("','", array_values($data));
+                $query = "INSERT INTO ledgers($fields) VALUES ('$values')";
+                $stmt = $this->con->prepare($query);
+                $stmt->execute();
+                return true;
+
+            }else{
+                return false;
             }
-
-            $fields = implode(",", array_keys($data));
-            $values = implode("','", array_values($data));
-            $query = "INSERT INTO ledgers($fields) VALUES ('$values')";
-            $stmt = $this->con->prepare($query);
-            $stmt->execute();
-            return true;
-
-        }else{
+        }catch(PDOException $e){
+            echo "Error: " . $e->getMessage();
             return false;
         }
+
     }
 
 
@@ -149,48 +149,31 @@ class Ledger extends BaseModel
         }
     }
 
-    public function getGroupName()
+    function removeAlias($alias_id)
     {
-        $query = "SELECT name FROM ledgers";
+        if(!empty($alias_id)){
+            $query = "DELETE FROM ledger_alias WHERE Id='$alias_id'";
+            $stmt = $this->con->prepare($query);
+            $stmt->execute();
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    public function fetchLedgerName()
+    {
+        $query = "SELECT ledger_name FROM ledgers";
         $stmt = $this->con->prepare($query);
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row['name'];
-    }
-
-    public function getId($name)
-    {
-        $query = "SELECT max(id) as id FROM ledgers";
-        $stmt = $this->con->prepare($query);
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row['id'];
+        return $row['ledger_name'];
     }
 
 
-//    public function getParentName()
-//    {
-//        $query = "SELECT parent FROM group_categories";
-//        $stmt = $this->con->prepare($query);
-//        $stmt->execute();
-//        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-//        return $row['parent'];
-//    }
 
-//    public function getAlias($alias, $name)
-//    {
-//
-//        $query = "SELECT * FROM ledgers s
-//              INNER JOIN ledger_alias g ON s.master_id = g.master_id AND s.name=g.name
-//              WHERE s.alias = :alias OR g.alias1 = :alias OR s.name=:name";
-//        $stmt = $this->con->prepare($query);
-//        $stmt->bindParam(':alias', $alias, PDO::PARAM_STR);
-//        $stmt->bindParam(':alias1', $alias, PDO::PARAM_STR);
-//        $stmt->bindParam(':name', $name, PDO::PARAM_STR);
-//        $stmt->execute();
-//        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-//        return $row;
-//    }
+
+
     public function getAlias($alias, $name)
     {
 
@@ -199,7 +182,7 @@ class Ledger extends BaseModel
 
         $query = "SELECT * FROM ledgers s
               INNER JOIN ledger_alias g ON s.id = g.ledger_id
-              WHERE (g.alias1 = :alias) OR s.name=:name";
+              WHERE (g.alias1 = :alias) OR s.ledger_name=:name";
         $stmt = $this->con->prepare($query);
         $stmt->bindParam(':alias', $alias_name, PDO::PARAM_STR);
         $stmt->bindParam(':name', $ledger_name, PDO::PARAM_STR);
@@ -214,9 +197,14 @@ class Ledger extends BaseModel
         $ledger_name = $_POST['ledger_name'];
         $alias_name = $_POST['alias_name'];
 
+//        if (strpos($ledger_name, '-') === 0 || strrpos($ledger_name, '-') === (strlen($ledger_name) - 1) ||
+//            strpos($ledger_name, ';') === 0 || strrpos($ledger_name, ';') === (strlen($ledger_name) - 1)) {
+//            return false;
+//        }
+
         $query = "SELECT * FROM ledgers s
               INNER JOIN ledger_alias g ON s.id = g.ledger_id
-              WHERE (g.alias1 = :alias) OR s.name=:name AND s.id=:id";
+              WHERE (g.alias1 = :alias) OR s.ledger_name=:name or s.id=:id";
         $stmt = $this->con->prepare($query);
         $stmt->bindParam(':alias', $alias_name, PDO::PARAM_STR);
         $stmt->bindParam(':name', $ledger_name, PDO::PARAM_STR);
@@ -226,16 +214,17 @@ class Ledger extends BaseModel
         return $row;
     }
 
-    public function getAliasData($alias)
+    public function getAliasData($alias, $editedIndex = -1)
     {
-        $alias_name = $_POST['alias'];
+        $alias_name = $alias;
 
         $query = "SELECT * FROM ledgers l
-              INNER JOIN ledger_alias la ON l.id = la.ledger_id
-              WHERE (la.alias1 = :alias) OR l.name=:name";
+            INNER JOIN ledger_alias la ON l.id = la.ledger_id
+            WHERE ((la.alias1 = :alias AND la.ledger_id <> :editedIndex) OR l.ledger_name=:name)";
         $stmt = $this->con->prepare($query);
         $stmt->bindParam(':alias', $alias_name, PDO::PARAM_STR);
         $stmt->bindParam(':name', $alias_name, PDO::PARAM_STR);
+        $stmt->bindParam(':editedIndex', $editedIndex, PDO::PARAM_INT);
         $stmt->execute();
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row;
@@ -259,16 +248,7 @@ class Ledger extends BaseModel
     public function fetchParent()
     {
 
-        $query = "SELECT * FROM ledgers GROUP BY name";
-        $stmt = $this->con->prepare($query);
-        $stmt->execute();
-        $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $row;
-    }
-    public function fetchParentData()
-    {
-
-        $query = "SELECT * FROM group_categories GROUP BY parent";
+        $query = "SELECT * FROM ledgers GROUP BY ledger_name";
         $stmt = $this->con->prepare($query);
         $stmt->execute();
         $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -277,68 +257,27 @@ class Ledger extends BaseModel
 
     public function getGroupParent($parent)
     {
-        $query = "SELECT * FROM ledgers  WHERE name =:name";
+        $query = "SELECT parent FROM stock_groups  WHERE id =:name";
         $stmt = $this->con->prepare($query);
         $stmt->bindParam(':name', $parent, PDO::PARAM_STR);
         $stmt->execute();
-        $row = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return $row;
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row['parent'];
     }
 
-
-
-    public function add($data)
+    public function fetchGroup($id)
     {
-        $columns = [
-            'master_id',
-            'name',
-            'alias',
-            'alias1',
-            'parent_master_id',
-            'parent',
-            'alterid',
-            'created_at',
-            'updated_at'
-        ];
-
-        if (!empty($data) && is_array($data)) {
-            foreach ($data as $key => $value) {
-                if (is_null($value) || $value == '')
-                    unset($data[$key]);
-            }
-
-            $this->batchInsert('ledgers', array_values($data), $columns);
-
-            return true;
-        } else {
-            return false;
+        try {
+            $query = "SELECT name from stock_groups where id=:id";
+            $result = $this->con->prepare($query);
+            $result->bindParam(':id', $id, PDO::PARAM_INT);
+            $result->execute();
+            $rows = $result->fetchAll(PDO::FETCH_ASSOC);
+            return $rows;
+        }catch (PDOException $e){
+            echo "Error: ". $e->getMessage();
         }
     }
 
-    public function update($StockGroupDetails, $master_id)
-    {
-        if (!empty($StockGroupDetails) && is_array($StockGroupDetails)) {
-            $update_query = '';
-            $total_data = count($StockGroupDetails);
-
-            foreach ($StockGroupDetails as $columns => $values) {
-                $update_query .= "$columns = '$values'";
-                if($total_data > 1)
-                {
-                    $update_query .= ",";
-                    $total_data--;
-                }
-            }
-            //	update query
-            $update_query=rtrim($update_query,',');
-            $query = "UPDATE ledgers SET $update_query WHERE master_id='$master_id'";
-            // exit;
-            $stmt = $this->con->prepare($query);
-            $stmt->execute();
-            return true;
-        } else {
-            return false;
-        }
-    }
 
 }

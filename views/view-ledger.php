@@ -6,8 +6,8 @@ require('../models/Ledger.php');
 $database = new Database();
 $db = $database->connect();
 
-$stocks = new Ledger($db);
-$ledgers = $stocks->all();
+$ledgers = new Ledger($db);
+$ledgerData = $ledgers->all();
 
 
 ?>
@@ -23,7 +23,7 @@ $ledgers = $stocks->all();
                             <div>
                                 <button type="button" onclick="event.preventDefault(); window.history.back();" class="btn btn-secondary btn-sm btn-icon-text"><i class="ti-arrow-left btn-icon-prepend"></i> Back</button>
                                 <!--                            <a href="../controllers/StockGroupController.php?f=insertStockGroup" class="btn btn-primary btn-sm btn-icon-text"><i class="ti-reload btn-icon-prepend"></i> Refresh</a>-->
-                                <a href="create-ledger.php" class="btn btn-primary btn-sm btn-icon-text"><i class="ti-reload btn-icon-prepend"></i> Create</a>
+                                <a href="create-ledger.php" class="btn btn-primary btn-sm btn-icon-text"><i class="ti-plus btn-icon-prepend"></i> Create</a>
                             </div>
                         </div>
                         <h4 class="text-center">
@@ -43,11 +43,11 @@ $ledgers = $stocks->all();
                                 </thead>
                                 <tbody>
                                 <?php $i = 1;
-                                foreach ($ledgers as $key => $values) { ?>
+                                foreach ($ledgerData as $key => $values) { ?>
                                     <tr>
                                         <td><?php echo $i++ ?></td>
+                                        <td><?php echo $values['ledger_name'] ?></td>
                                         <td><?php echo $values['name'] ?></td>
-                                        <td><?php echo $values['parent'] ?></td>
                                         <td>
                                             <a href="edit-ledger.php?id=<?php echo $values['id'];?>" class="btn btn-info btn-sm"><i class="ti-pencil-alt btn-icon-prepend"></i>Alter </a>
                                         </td>

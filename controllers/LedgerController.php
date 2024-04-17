@@ -3,62 +3,69 @@ session_start();
 error_reporting(E_ALL & ~ E_NOTICE);
 require ('../database/connection.php');
 require ('../models/Ledger.php');
+require ('../models/StockGroup.php');
 $database = new Database();
 $db = $database->connect();
-$stockgroup = new Ledger($db);
+$ledger_data = new Ledger($db);
 
 
-function createGroup()
+
+function createLedger()
 {
-    global $db;
-    global $stockgroup;
-
-
-    $master = generateUniqueMasterID();
-
+    global $ledger_data;
 
     $data = array(
-        'master_id' => $master,
-        'name' => str_replace("'", "''", $_POST['ledger_name']),
-        'alias' => $_POST['alias_name'],
-        'alias1' => "",
-        'parent_master_id' => 0,
+        'ledger_name' => str_replace("'", "''", $_POST['ledger_name']),
+//        'alias' => $_POST['alias_name'],
         'parent' => $_POST['parent'],
+        'pay_by_bill' => $_POST['pay_by_bill'],
+        'credit_period' => $_POST['credit_period'],
+        'contact_name' => $_POST['contact_name'],
+        'address' => $_POST['address'],
+        'address1' => $_POST['address1'],
+        'address2' => $_POST['address2'],
+        'address3' => $_POST['address3'],
+        'primary_phone_number' => $_POST['primary_phone_no'],
+        'phone_number' => $_POST['phone_no'],
+        'email' => $_POST['email'],
+        'ccemail' => $_POST['ccemail'],
+        'account_name' => $_POST['account_name'],
+        'account_number' => $_POST['account_no'],
+        'bank_code' => $_POST['bank_code'],
+        'bank_name' => $_POST['bank_name'],
+        'branch' => $_POST['branch'],
         'created_at' => date('Y-m-d H:i:s'),
         'updated_at' => null,
     );
+//    echo json_encode($data);
+//    exit;
 
 
 
-
-    $name = $stockgroup->getGroupName();
+    $name = $ledger_data->fetchLedgerName();
 
     if($name == $_POST['ledger_name']) {
         $_SESSION['message']='<div class="alert alert-danger">Name already exists. Please choose a different name.</div>';
         exit;
     }
-    $add_response = $stockgroup->insertStock($data);
+    $add_response = $ledger_data->insertLedger($data);
 
-
-
-
-    $stock_id = $stockgroup->getId($_POST['ledger_name']);
-
+    $ledger_id = $ledger_data->fetchMaxLedgerId($_POST['ledger_name']);
 
     $alias = array();
     if(!empty($_POST['alias'])){
         foreach ($_POST['alias'] as $key => $val) {
             $alias = array(
-                'ledger_id' => $stock_id,
+                'ledger_id' => $ledger_id,
                 'alias1' => $val,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => null
             );
-            $alias_response = $stockgroup->insertAlias($alias);
+            $ledger_data->insertAlias($alias);
         }
     }
 
-    if($add_response && $alias_response) {
+    if($add_response) {
         $_SESSION['message']='<div class="alert alert-success">Ledgers created successfully!</div>';?>
         <script>
             window.history.back();
@@ -73,105 +80,37 @@ function createGroup()
     }
 }
 
-function generateUniqueMasterID($length = 5) {
-    $unique_id = uniqid();
-
-    // Add a random component to ensure uniqueness
-    $random_component = bin2hex(random_bytes(2));
-    $master_id = substr($unique_id, 0, $length - strlen($random_component)) . $random_component;
-    return $master_id;
-}
-
-function checkGroupName(){
-    global $stockgroup;
-    $name = $_POST['ledger_name'];
-    if (isset($name)){
-        $groupname = $stockgroup->getGroupName($name);
-        echo json_encode($groupname);
-    }
-}
-
-function checkGroupAndAlias(){
-    global $stockgroup;
-
-    if (isset($_POST['ledger_name']) || isset($_POST['alias_name'])){
-        $alias = $_POST['alias_name'];
-        $name = $_POST['ledger_name'];
-
-        $data = $stockgroup->getAlias($alias, $name);
-        if ($data) {
-            echo json_encode(['exists' => true]);
-        } else {
-            echo json_encode(['exists' => false]);
-        }
-    }
-}
-
-function checkGroupAndAliasDuplicates(){
-    global $stockgroup;
-    if (isset($_POST['ledger_name']) || isset($_POST['alias_name'])){
-        $alias = $_POST['alias_name'];
-        $name = $_POST['ledger_name'];
-        $id = $_POST['group_id'];
-
-        $data = $stockgroup->getAliasAndGroupName($alias, $name, $id);
-        if ($data) {
-            echo json_encode(['exists' => true]);
-        } else {
-            echo json_encode(['exists' => false]);
-        }
-    }
-}
-function checkLedgerAliasData(){
-    global $stockgroup;
-    if (isset($_POST['alias'])){
-        $alias = $_POST['alias'];
-
-        $data = $stockgroup->getAliasData($alias);
-        if ($data) {
-            echo json_encode(['exists' => true]);
-        } else {
-            echo json_encode(['exists' => false]);
-        }
-    }
-}
-
-function updateGroup()
+function updateLedger()
 {
-    global $stockgroup;
+    global $ledger_data;
     global $db;
     $master_id = $_POST['group_id'];
     $data = array(
-        'master_id' => null,
-        'name' => str_replace("'", "''", $_POST['ledger_name']),
-        'alias' => $_POST['alias_name'],
+        'ledger_name' => str_replace("'", "''", $_POST['ledger_name']),
         'parent' => $_POST['parent'],
-        'created_at' => date('Y-m-d H:i:s'),
+        'pay_by_bill' => $_POST['pay_by_bill'],
+        'credit_period' => $_POST['credit_period'],
+        'contact_name' => $_POST['contact_name'],
+        'address' => $_POST['address'],
+        'address1' => $_POST['address1'],
+        'address2' => $_POST['address2'],
+        'address3' => $_POST['address3'],
+        'primary_phone_number' => $_POST['primary_phone_no'],
+        'phone_number' => $_POST['phone_no'],
+        'email' => $_POST['email'],
+        'ccemail' => $_POST['ccemail'],
+        'account_name' => $_POST['account_name'],
+        'account_number' => $_POST['account_no'],
+        'bank_code' => $_POST['bank_code'],
+        'bank_name' => $_POST['bank_name'],
+        'branch' => $_POST['branch'],
         'updated_at' => date('Y-m-d H:i:s'),
     );
 //    echo json_encode($data);
 //    exit;
-    $query = "SELECT name FROM ledgers WHERE id = :id";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':id', $master_id, PDO::PARAM_STR);
-    $stmt->execute();
-    $values = $stmt->fetch(PDO::FETCH_ASSOC);
 
 
-    $query = "SELECT parent FROM ledgers WHERE parent=:name GROUP BY parent";
-    $stmt = $db->prepare($query);
-    $stmt->bindParam(':name', $values['name'], PDO::PARAM_STR);
-    $stmt->execute();
-    $checkParent = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-
-    if (count($checkParent) > 0){
-        $query = "UPDATE ledgers set parent='".$_POST['ledger_name']."' WHERE parent='".$values['name']."'";
-        $stmt = $db->prepare($query);
-        $stmt->execute();
-    }
-
-    $add_response = $stockgroup->updateStock($data, $master_id);
+    $add_response = $ledger_data->updateStock($data, $master_id);
     $existingAliases = array();
     $sql = "SELECT Id, alias1 FROM ledger_alias WHERE ledger_id = ?";
     $stmt = $db->prepare($sql);
@@ -219,12 +158,12 @@ function updateGroup()
 //    exit;
 
     foreach ($aliasToUpdate as $data) {
-        $stockgroup->updateAlias($data, $data['id']); // Use ID for update
+        $ledger_data->updateAlias($data, $data['id']); // Use ID for update
     }
 
     // Insert new aliases
     foreach ($aliasToInsert as $alias) {
-        $stockgroup->insertAlias($alias);
+        $ledger_data->insertAlias($alias);
     }
 
 
@@ -235,7 +174,7 @@ function updateGroup()
     if($add_response) {
         $_SESSION['message']='<div class="alert alert-success">Ledgers updated successfully!</div>';?>
         <script>
-            window.history.back();
+            window.location.href = '../views/view-ledger.php';
         </script>
         <?php
     } else{
@@ -247,16 +186,94 @@ function updateGroup()
     }
 }
 
+
+function checkGroupName(){
+    global $ledger_data;
+    $name = $_POST['ledger_name'];
+    if (isset($name)){
+        $groupname = $ledger_data->getGroupName($name);
+        echo json_encode($groupname);
+    }
+}
+
+function checkGroupAndAlias(){
+    global $ledger_data;
+
+    if (isset($_POST['ledger_name']) || isset($_POST['alias_name'])){
+        $alias = $_POST['alias_name'];
+        $name = $_POST['ledger_name'];
+
+        $data = $ledger_data->getAlias($alias, $name);
+        if ($data) {
+            echo json_encode(['exists' => true]);
+        } else {
+            echo json_encode(['exists' => false]);
+        }
+    }
+}
+
+function checkGroupAndAliasDuplicates(){
+    global $ledger_data;
+    if (isset($_POST['ledger_name']) || isset($_POST['alias_name'])){
+        $alias = $_POST['alias_name'];
+        $name = $_POST['ledger_name'];
+        $id = $_POST['group_id'];
+
+        $data = $ledger_data->getAliasAndGroupName($alias, $name, $id);
+        if ($data) {
+            echo json_encode(['exists' => true]);
+        } else {
+            echo json_encode(['exists' => false]);
+        }
+    }
+}
+function checkLedgerAliasData(){
+    global $ledger_data;
+    if (isset($_POST['alias'])){
+        $alias = $_POST['alias'];
+        $editedIndex = isset($data['editedIndex']) ? $data['editedIndex'] : -1;
+
+        $data = $ledger_data->getAliasData($alias,$editedIndex);
+        if ($data) {
+            echo json_encode(['exists' => true]);
+        } else {
+            echo json_encode(['exists' => false]);
+        }
+    }
+}
+
+
+
 function getParent()
 {
     global $db;
-    global $stockgroup;
+    global $ledger_data;
     $name = $_POST['parent'];
     if (isset($name)){
-        $groupname = $stockgroup->getGroupParent($name);
+        $groupname = $ledger_data->getGroupParent($name);
         echo json_encode($groupname);
     }
 
+}
+
+function viewGroups()
+{
+    global $ledger_data;
+    $id = $_POST['parent'];
+    if(isset($id)){
+        $group = $ledger_data->fetchGroup($id);
+        echo json_encode($group);
+    }
+}
+
+function deleteAlias()
+{
+    global $ledger_data;
+    $alias_id = $_POST['alias_id'];
+    if (isset($alias_id)){
+        $groupname = $ledger_data->removeAlias($alias_id);
+        echo json_encode($groupname);
+    }
 }
 
 
